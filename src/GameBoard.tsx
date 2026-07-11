@@ -392,6 +392,9 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
         };
     }, []);
     return <>
+        <img src={waiting ? "/turn-opponent.png" : "/turn-you.png"}
+             style={{height: "50px", position: "absolute"}}
+        />
         <canvas style={{width: "100vw", height: "100vh"}} id={"board"} ref={canvasRef}/>
         <div style={{display: "none"}}>
             <img src={"/tile.png"} id="tile"/>
