@@ -56,6 +56,7 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
     const [winner, setWinner] = useState("")
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const fabricCanvasRef = useRef<Canvas | null>(null);
+    const [portals, setPortals] = useState<Tile[]>([])
 
     const context = useContext(MQTTContext)
     if (context === null)
@@ -143,7 +144,64 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
         canvas.renderAll()
         console.log("setting horse to ", tile)
         sethorseTile(tile)
+        checkHorseWin(tile)
         return true
+    }
+
+    function checkHorseWin(tile: Tile) {
+        if ([...tile.neighbours.values()].length != 6) {
+            console.log([...tile.neighbours.values()].length)
+            setWinner("horse")
+        }
+    }
+
+    function getKnightPositions(tile: Tile) {
+        return [
+            tile.neighbours.get(Directions.N)?.neighbours.get(Directions.NE),
+            tile.neighbours.get(Directions.N)?.neighbours.get(Directions.NW),
+            tile.neighbours.get(Directions.NE)?.neighbours.get(Directions.SE),
+            tile.neighbours.get(Directions.SE)?.neighbours.get(Directions.S),
+            tile.neighbours.get(Directions.S)?.neighbours.get(Directions.SW),
+            tile.neighbours.get(Directions.SW)?.neighbours.get(Directions.NW),
+        ]
+    }
+
+    function checkBlockerWin() {
+        const queue: Tile[] = []
+        const visited: Tile[] = []
+
+        let tile = horseTile
+        while (tile) {
+            visited.push(tile)
+
+            if ([...tile.neighbours.values()].length != 6) {
+                return
+            }
+
+            if (tile.powerup == "bomb")
+                return
+            else if (tile.powerup == "knight") {
+                const positions = getKnightPositions(tile).filter(_ => _ && visited.includes(_))
+                for (const pos of positions) {
+                    if (!pos || visited.includes(pos) || pos.state == "blocked") {
+                        continue
+                    }
+                    queue.push(pos)
+                }
+            } else if (tile.powerup == "portal") {
+                for (const portal of portals) {
+                    if (!visited.includes(portal))
+                        queue.push(portal)
+                }
+            } else {
+                for (const pos of [...tile.neighbours.values()]) {
+                    if (!visited.includes(pos) && pos.state != "blocked")
+                        queue.push(pos)
+                }
+            }
+            tile = queue.shift()
+        }
+        setWinner("blocker")
     }
 
     async function placeBlock(tile: Tile, canvas: Canvas) {
@@ -151,6 +209,7 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
             return false
         await tile.image.setSrc("/tile-blocked.png")
         tile.state = "blocked"
+        checkBlockerWin()
         canvas.renderAll()
         return true
     }
@@ -284,7 +343,8 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
                 y: canvas.height / 2 - TILE_HEIGHT / 2,
                 neighbours: new Map<string, Tile>(),
                 image: firstImage,
-                available: available
+                available: available,
+                powerup: ""
             }
             tileMap.set("s", firstElem)
             tilePositions.set(`${firstElem.x} ${firstElem.y}`, "s")
@@ -356,7 +416,8 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
                         y: tile.y + offsets[1],
                         neighbours: new Map<string, Tile>(),
                         image: img,
-                        available: avail
+                        available: avail,
+                        powerup: ""
                     }
                     newTile.neighbours.set(opposites[direction], tile)
                     tile.neighbours.set(direction, newTile)
@@ -393,24 +454,23 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
         };
     }, []);
 
-    if (winner == "horse") {
-        return <div className={"container"}
-                    style={{
-                        backgroundSize: "cover",
-                        backgroundImage: mode == "horse" ? "url('/horse-win.jpg')" : "url('/brick-lose.jpg')"
-                    }}/>
-    }
-    if (winner == "blocker") {
-        return <div className={"container"}
-                    style={{
-                        backgroundSize: "cover",
-                        backgroundImage: mode == "blocker" ? "url('/brick-win.png')" : "url('/horse-lose.png')"
-                    }}/>
-    }
 
     return <>
+        {winner == "horse"
+            ? <div className={"container"}
+                   style={{
+                       backgroundSize: "cover",
+                       backgroundImage: mode == "horse" ? "url('/horse-win.jpg')" : "url('/brick-lose.jpg')"
+                   }}/>
+            : winner == "blocker"
+                ? <div className={"container"}
+                       style={{
+                           backgroundSize: "cover",
+                           backgroundImage: mode == "blocker" ? "url('/brick-win.png')" : "url('/horse-lose.png')"
+                       }}/>
+                : <></>}
         <img src={waiting ? "/turn-opponent.png" : "/turn-you.png"}
-             style={{height: "50px", position: "absolute"}}
+             style={{height: "50px", position: "absolute", margin: "15px"}}
         />
         <canvas style={{width: "100vw", height: "100vh"}} id={"board"} ref={canvasRef}/>
         <div style={{display: "none"}}>

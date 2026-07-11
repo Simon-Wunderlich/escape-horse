@@ -7,5 +7,6 @@ export default interface Tile {
     y: number,
     neighbours: Map<string, Tile>,
     image: FabricImage,
-    available: FabricImage
+    available: FabricImage,
+    powerup: "" | "bomb" | "portal" | "knight" | "invis"
 }
