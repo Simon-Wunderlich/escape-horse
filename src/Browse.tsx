@@ -63,14 +63,7 @@ export default function Browse({setPage, setRole, setId, setBlocks}: {
     }
 
     if (loading) {
-        return <div style={{
-            width: "100vw",
-            height: "100vh",
-            display: "flex",
-            justifyContent: "center",
-            placeItems: "center",
-            flexDirection: "column"
-        }}>
+        return <div className={"container"}>
             <h1>
                 Loading...
             </h1>
@@ -78,28 +71,26 @@ export default function Browse({setPage, setRole, setId, setBlocks}: {
     }
 
     return (<>
-        <div style={{
-            width: "100vw",
-            height: "100vh",
-            display: "flex",
-            justifyContent: "center",
-            placeItems: "center",
-            flexDirection: "column"
-        }}>
-            <h1>Lobbies</h1>
-            {lobbies.map(lobby => {
-                return <div
-                    style={{display: "flex", width: "500px", justifyContent: "space-between", alignItems: "center"}}
-                    key={lobby.id}>
-                    <div>
-                        <h4>{lobby.name} {lobby.role == "blocker" ? "🧱" : "🐎"}</h4>
-                        <p>{lobby.id}</p>
-                    </div>
-                    <button style={{height: "fit-content"}}
-                            onClick={() => joinGame(lobby.id, lobby.role, lobby.blocks)}>Join
-                    </button>
+        <div className={"container"}>
+            <div className={"menu"}>
+                <div className={"hStack"}>
+                    <h1>Lobbies</h1>
+                    <button onClick={fetchData}>⟳</button>
                 </div>
-            })}
+                {lobbies.map(lobby => {
+                    return <div
+                        style={{display: "flex", width: "500px", justifyContent: "space-between", alignItems: "center"}}
+                        key={lobby.id}>
+                        <div>
+                            <h4>{lobby.name} {lobby.role == "blocker" ? "🧱" : "🐎"}</h4>
+                            <p>{lobby.id}</p>
+                        </div>
+                        <button style={{height: "fit-content"}}
+                                onClick={() => joinGame(lobby.id, lobby.role, lobby.blocks)}>Join
+                        </button>
+                    </div>
+                })}
+            </div>
         </div>
     </>)
 }

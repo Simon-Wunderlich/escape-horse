@@ -53,6 +53,7 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
     const [tilePositions] = useState<Map<string, string>>(new Map)
     const [tileMap] = useState<Map<string, Tile>>(new Map)
     const [disposers, setDisposers] = useState<VoidFunction[]>([])
+    const [winner, setWinner] = useState("")
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const fabricCanvasRef = useRef<Canvas | null>(null);
 
@@ -391,6 +392,22 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
             }
         };
     }, []);
+
+    if (winner == "horse") {
+        return <div className={"container"}
+                    style={{
+                        backgroundSize: "cover",
+                        backgroundImage: mode == "horse" ? "url('/horse-win.jpg')" : "url('/brick-lose.jpg')"
+                    }}/>
+    }
+    if (winner == "blocker") {
+        return <div className={"container"}
+                    style={{
+                        backgroundSize: "cover",
+                        backgroundImage: mode == "blocker" ? "url('/brick-win.png')" : "url('/horse-lose.png')"
+                    }}/>
+    }
+
     return <>
         <img src={waiting ? "/turn-opponent.png" : "/turn-you.png"}
              style={{height: "50px", position: "absolute"}}

@@ -77,44 +77,33 @@ export default function CreateLobby({setPage, setId, setMode, setBlocks}: {
 
     if (waiting) {
         return (<>
-            <div style={{
-                width: "100vw",
-                height: "100vh",
-                display: "flex",
-                justifyContent: "center",
-                placeItems: "center",
-                flexDirection: "column"
-            }}>
+            <div className={"container"}>
                 <h1>Waiting for opponent...</h1>
             </div>
         </>)
     }
 
     return (<>
-        <div style={{
-            width: "100vw",
-            height: "100vh",
-            display: "flex",
-            justifyContent: "center",
-            placeItems: "center",
-            flexDirection: "column"
-        }}>
-            <h1>New lobby</h1>
-            <form onSubmit={createLobby}>
-                <input name={"name"} placeholder={"Lobby name"} onChange={(e) => setName(e.target.value)}></input>
-                <button>Create lobby</button>
-                <fieldset>
-                    <legend>Choose your role</legend>
-                    <div>
-                        <input type="radio" id="blocker" name={"1"} defaultChecked/>
-                        <label htmlFor="blocker" onChange={() => setRole("blocker")}>Blocker</label>
-                        <input type="radio" id="horse" name={"1"} onChange={() => setRole("horse")}/>
-                        <label htmlFor="horse">Horse</label>
-                    </div>
-                    <div>
-                    </div>
-                </fieldset>
-            </form>
+        <div className={"container"}>
+
+            <div className={"menu"}>
+                <h1>New lobby</h1>
+                <form onSubmit={createLobby}>
+                    <input name={"name"} placeholder={"Lobby name"} onChange={(e) => setName(e.target.value)}></input>
+                    <button>Create lobby</button>
+                    <fieldset>
+                        <legend>Choose your role</legend>
+                        <div>
+                            <input type="radio" id="blocker" name={"1"} defaultChecked/>
+                            <label htmlFor="blocker" onChange={() => setRole("blocker")}>Blocker</label>
+                            <input type="radio" id="horse" name={"1"} onChange={() => setRole("horse")}/>
+                            <label htmlFor="horse">Horse</label>
+                        </div>
+                        <div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
         </div>
     </>)
 }
