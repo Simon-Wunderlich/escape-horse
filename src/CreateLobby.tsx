@@ -16,10 +16,11 @@ function shuffle(array: string[]) {
 }
 
 
-export default function CreateLobby({setPage, setId, setMode, setBlocks}: {
+export default function CreateLobby({setPage, setId, setMode, setBlocks, setPowerups}: {
     setPage: Dispatch<SetStateAction<Page>>,
     setId: Dispatch<SetStateAction<string>>,
     setBlocks: Dispatch<SetStateAction<string[]>>,
+    setPowerups: Dispatch<SetStateAction<{ [key: string]: string }>>,
     setMode: Dispatch<SetStateAction<"horse" | "blocker">>,
 }) {
     const [name, setName] = useState("")
@@ -38,9 +39,27 @@ export default function CreateLobby({setPage, setId, setMode, setBlocks}: {
         }
     }
 
-    function generateBlocks() {
-        const ids = shuffle(tileList.slice(18))
-        return ids.slice(0, 40)
+    function generate() {
+        let ids = shuffle(tileList.slice(18))
+        const blocks = ids.slice(0, 20)
+
+        const powerups = shuffle(["portal", "bomb", "invis", "knight"])
+        ids = ids.slice(20)
+        const tiles: { [key: string]: string } = {}
+        let j = 0
+        for (let i = 0; i < 4; i++) {
+            let id = ids[i + j]
+            while (id.length > 6) {
+                j += 1
+                id = ids[i + j]
+            }
+            tiles[id] = powerups[i]
+        }
+        if (powerups.slice(0, 4).includes("portal")) {
+            tiles[ids[j + 4]] = "portal"
+        }
+
+        return {"blocks": blocks, "powerups": tiles}
     }
 
     function createLobby(e: SubmitEvent) {
@@ -50,7 +69,7 @@ export default function CreateLobby({setPage, setId, setMode, setBlocks}: {
             return
 
         const id = crypto.randomUUID()
-        const blocks = generateBlocks()
+        const {blocks, powerups} = generate()
         setWaiting(true)
         subscribe(id, receiveMessage)
             .then(() => {
@@ -63,12 +82,14 @@ export default function CreateLobby({setPage, setId, setMode, setBlocks}: {
                         name: name,
                         id: id,
                         role: role == "blocker" ? "horse" : "blocker",
-                        blocks: blocks
+                        blocks: blocks,
+                        powerups: powerups
                     })
                 })
                     .then(() => {
                         setId(id)
                         setBlocks(blocks)
+                        setPowerups(powerups)
                         setMode(role)
                     })
             })

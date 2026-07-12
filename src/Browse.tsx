@@ -6,16 +6,18 @@ interface Lobby {
     id: string,
     name: string,
     role: "horse" | "blocker",
-    blocks: string[]
+    blocks: string[],
+    powerups: { [key: string]: string }
 }
 
 const SERVER_URL = "http://127.0.0.1:5000/lobbies"
 
-export default function Browse({setPage, setRole, setId, setBlocks}: {
+export default function Browse({setPage, setRole, setId, setBlocks, setPowerups}: {
     setPage: Dispatch<SetStateAction<Page>>,
     setRole: Dispatch<SetStateAction<"horse" | "blocker">>
     setId: Dispatch<SetStateAction<string>>
     setBlocks: Dispatch<SetStateAction<string[]>>
+    setPowerups: Dispatch<SetStateAction<{ [key: string]: string }>>
 }) {
     const [lobbies, setLobbies] = useState<Lobby[]>([])
     const [loading, setLoading] = useState(false)
@@ -38,24 +40,25 @@ export default function Browse({setPage, setRole, setId, setBlocks}: {
         fetchData()
     }, []);
 
-    async function join(id: string, role: "horse" | "blocker", blocks: string[]) {
+    async function join(lobby: Lobby) {
         setLoading(true)
-        await sendMessage(id, JSON.stringify({
+        await sendMessage(lobby.id, JSON.stringify({
             "message": "joined",
-            "id": id
+            "id": lobby.id
         }))
-        setRole(role)
-        setId(id)
-        setBlocks(blocks)
+        setRole(lobby.role)
+        setId(lobby.id)
+        setBlocks(lobby.blocks)
+        setPowerups(lobby.powerups)
         setPage("Game")
     }
 
-    function joinGame(id: string, role: "horse" | "blocker", blocks: string[]) {
-        fetch(SERVER_URL + "/" + id, {method: "DELETE"})
+    function joinGame(lobby: Lobby) {
+        fetch(SERVER_URL + "/" + lobby.id, {method: "DELETE"})
             .then(async response => {
                 if (!response.ok)
                     throw Error("Lmao")
-                await join(id, role, blocks)
+                await join(lobby)
             })
             .catch(() => {
                 fetchData()
@@ -86,7 +89,7 @@ export default function Browse({setPage, setRole, setId, setBlocks}: {
                             <p>{lobby.id}</p>
                         </div>
                         <button style={{height: "fit-content"}}
-                                onClick={() => joinGame(lobby.id, lobby.role, lobby.blocks)}>Join
+                                onClick={() => joinGame(lobby)}>Join
                         </button>
                     </div>
                 })}

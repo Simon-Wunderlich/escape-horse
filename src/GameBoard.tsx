@@ -23,6 +23,13 @@ const opposites = {
     "f": "c"
 }
 
+const powerSprites: { [key: string]: string } = {
+    "portal": "/tile-portal.png",
+    "invis": "/tile-invis.png",
+    "knight": "/tile-knight.png",
+    "bomb": "/tile-bomb.png"
+}
+
 function getNextTileOffset(direction: Directions) {
     const X_OFFSET = TILE_WIDTH / 2 + 20
     const Y_OFFSET = TILE_HEIGHT / 2 + 5
@@ -47,7 +54,12 @@ const directionList = [Directions.N, Directions.NE, Directions.SE, Directions.S,
 const TILE_WIDTH = 45
 const TILE_HEIGHT = 40
 
-export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse" | "blocker", blocks: string[] }) {
+export default function GameBoard({id, mode, blocks, powerups}: {
+    id: string,
+    mode: "horse" | "blocker",
+    blocks: string[],
+    powerups: { [key: string]: string }
+}) {
     const [waiting, setWaiting] = useState(mode == "blocker")
     const [horseTile, sethorseTile] = useState<Tile | null>()
     const [tilePositions] = useState<Map<string, string>>(new Map)
@@ -58,14 +70,26 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
     const fabricCanvasRef = useRef<Canvas | null>(null);
     const [portals, setPortals] = useState<Tile[]>([])
 
+    const [currentPower, setCurrentPower] = useState("")
+    const [powerTurnsRemaining, setpowerTurnsRemaining] = useState(0)
+
     const context = useContext(MQTTContext)
     if (context === null)
         throw new Error('MQTTContext must be used within MQTTProvider');
 
     const {subscribe, sendMessage, unsubscribe} = context
 
-    function findAvailableTiles(tile: Tile) {
+    function findAvailableTiles(tile: Tile, knight: boolean = false) {
         const neighbours: Tile[] = [];
+        console.log(currentPower)
+        if (currentPower == "knight" || knight) {
+            getKnightPositions(tile).map((neighbour) => {
+                if (neighbour && neighbour.state != "blocked") {
+                    neighbours.push(neighbour)
+                }
+            })
+            return neighbours
+        }
         [...tile.neighbours.values()].map((neighbour) => {
             if (neighbour.state != "blocked") {
                 neighbours.push(neighbour)
@@ -79,6 +103,10 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
         if (!fabricCanvasRef) return
         const canvas = fabricCanvasRef.current
         if (!canvas) return;
+        if (message == "RESIGNED") {
+            setWinner("blocker")
+            return;
+        }
         const body = JSON.parse(message)
         const tile = tileMap.get(body["id"])
         if (!tile)
@@ -116,6 +144,22 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
     }
 
     async function moveHorse(tile: Tile, canvas: Canvas) {
+        if (currentPower == "bomb") {
+            if (tile.state == "blocked") {
+                tile.state = "empty"
+                await tile.image.setSrc("/tile.png")
+            }
+            for (const neighbour of [...tile.neighbours.values()]) {
+                if (neighbour.state == "blocked") {
+                    neighbour.state = "empty"
+                    await neighbour.image.setSrc("/tile.png")
+                }
+            }
+            setCurrentPower("")
+            canvas.renderAll()
+            return true
+        }
+
         if (tile.state != "available")
             return false
         if (tile == horseTile)
@@ -123,28 +167,38 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
         if (horseTile) {
             horseTile.state = "empty"
             await horseTile.image.setSrc("/tile.png")
-            const currentAvailable = findAvailableTiles(horseTile);
-            for (const _tile of currentAvailable) {
-                if (_tile.state == "available") {
-                    _tile.state = "empty";
-                    _tile.available.opacity = 0
-                }
-            }
         }
-        tile.state = "horse"
-        await tile.image.setSrc("/tile-horse.png")
 
-        const nextAvailable = findAvailableTiles(tile);
-        for (const _tile of nextAvailable) {
-            _tile.state = "available";
-            if (mode == "horse") {
-                _tile.available.opacity = 100
+        let power = ""
+        if (tile.powerup) {
+            setCurrentPower(tile.powerup)
+            power = tile.powerup
+            if (tile.powerup == "invis") {
+                setpowerTurnsRemaining(2)
+            } else
+                setpowerTurnsRemaining(0)
+
+            if (tile.powerup == "portal") {
+                tile.powerup = ""
+                tile.state = "empty"
+                await tile.image.setSrc("/tile.png")
+                tile = portals.filter(_ => _ != tile)[0]
             }
-        }
+            tile.powerup = ""
+        } else if (powerTurnsRemaining > 0) {
+            setpowerTurnsRemaining(prevState => prevState - 1)
+        } else setCurrentPower("")
+
+        tile.state = "horse"
+        if (currentPower != "invis")
+            await tile.image.setSrc("/tile-horse.png")
+        if (power == "knight")
+            await tile.image.setSrc("/tile-knight.png")
+
         canvas.renderAll()
-        console.log("setting horse to ", tile)
         sethorseTile(tile)
         checkHorseWin(tile)
+        resetAvailability(canvas)
         return true
     }
 
@@ -181,7 +235,7 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
             if (tile.powerup == "bomb")
                 return
             else if (tile.powerup == "knight") {
-                const positions = getKnightPositions(tile).filter(_ => _ && visited.includes(_))
+                const positions = getKnightPositions(tile).filter(_ => _ && !visited.includes(_))
                 for (const pos of positions) {
                     if (!pos || visited.includes(pos) || pos.state == "blocked") {
                         continue
@@ -189,9 +243,14 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
                     queue.push(pos)
                 }
             } else if (tile.powerup == "portal") {
+                console.log("portal at", tile)
                 for (const portal of portals) {
                     if (!visited.includes(portal))
                         queue.push(portal)
+                }
+                for (const pos of [...tile.neighbours.values()]) {
+                    if (!visited.includes(pos) && pos.state != "blocked")
+                        queue.push(pos)
                 }
             } else {
                 for (const pos of [...tile.neighbours.values()]) {
@@ -205,22 +264,41 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
     }
 
     async function placeBlock(tile: Tile, canvas: Canvas) {
-        if (tile.state == "blocked" || tile.state == "horse")
+        console.log(tile.state, tile.powerup)
+        if ((tile.state != "empty" && tile.state != "available") || tile.powerup)
             return false
         await tile.image.setSrc("/tile-blocked.png")
         tile.state = "blocked"
+        if (currentPower != "bomb")
+            showAvailability(canvas)
         checkBlockerWin()
         canvas.renderAll()
         return true
     }
 
-    function toggleShowAvailability(canvas: Canvas) {
+    function showAvailability(canvas: Canvas, tile: Tile | null = null) {
+        if (!horseTile && !tile)
+            return
+
+        const nextAvailable = findAvailableTiles((horseTile || tile) as Tile);
+        for (const _tile of nextAvailable) {
+            _tile.state = "available";
+            if (mode == "horse") {
+                console.log("available")
+                _tile.available.opacity = 100
+            }
+        }
+        canvas.renderAll()
+    }
+
+    function resetAvailability(canvas: Canvas) {
+        console.log("resetting")
         if (mode != "horse")
             return
         for (const tile of [...tileMap.values()]) {
-            if (tile.state != "available")
-                continue
-            tile.available.opacity = waiting ? 0 : 100
+            tile.available.opacity = 0
+            if (tile.state != "blocked")
+                tile.state = "empty"
         }
         canvas.renderAll()
     }
@@ -229,8 +307,6 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
         if (!fabricCanvasRef) return
         const canvas = fabricCanvasRef.current
         if (!canvas) return;
-
-        toggleShowAvailability(canvas)
 
         for (const disposer of disposers) {
             disposer()
@@ -255,7 +331,7 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
         setDisposers(_disposers)
         unsubscribe(id + "/" + mode)
         subscribe(id + "/" + mode, onMessage)
-    }, [horseTile, waiting]);
+    }, [horseTile, waiting, powerTurnsRemaining]);
 
     async function handleHover(tile: Tile, focused: boolean, canvas: Canvas) {
         if (tile.state != "available") {
@@ -351,6 +427,7 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
 
             let tile: Tile | undefined = firstElem;
 
+            const _portals = []
 
             while (tile != null) {
                 if (visited.find(_ => _.x == tile?.x && _.y == tile?.y)) {
@@ -427,12 +504,20 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
                     if (blocks.includes(newId)) {
                         await newTile.image.setSrc("/tile-blocked.png")
                         newTile.state = "blocked"
+                    } else if (powerups[newId]) {
+                        newTile.powerup = powerups[newId]
+                        await newTile.image.setSrc(powerSprites[newTile.powerup])
+                        if (powerups[newId] == "portal") {
+                            _portals.push(newTile)
+                        }
                     }
                 }
                 tile = queue.shift()
             }
             canvas.renderAll()
-            moveHorse(firstElem, canvas)
+            setPortals(_portals)
+            await moveHorse(firstElem, canvas)
+            showAvailability(canvas, firstElem)
         }
 
         const imgElement = document.getElementById("tile") as HTMLImageElement;
@@ -454,6 +539,13 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
         };
     }, []);
 
+    function resign() {
+        setWinner("blocker")
+        const topic = `${id}/${mode == "horse" ? "blocker" : "horse"}`
+
+        sendMessage(topic, "RESIGNED")
+    }
+
 
     return <>
         {winner == "horse"
@@ -469,9 +561,19 @@ export default function GameBoard({id, mode, blocks}: { id: string, mode: "horse
                            backgroundImage: mode == "blocker" ? "url('/brick-win.png')" : "url('/horse-lose.png')"
                        }}/>
                 : <></>}
-        <img src={waiting ? "/turn-opponent.png" : "/turn-you.png"}
-             style={{height: "50px", position: "absolute", margin: "15px"}}
-        />
+        <div style={{position: "absolute", margin: "15px"}}>
+            <img src={waiting ? "/turn-opponent.png" : "/turn-you.png"}
+                 style={{height: "50px"}}/>
+            {currentPower
+                ? <img
+                    src={currentPower == "knight" ? "/knight-tip.png" : currentPower == "invis" ? "/invis-tip.png" : currentPower == "bomb" ? "/bomb-tip.png" : "/blank.png"}
+                    style={{height: "50px", display: "block"}}/>
+                : <></>}
+            <button onClick={resign}
+                    style={{display: mode == "horse" ? "block" : "none", zIndex: 1000, position: "relative"}}>Resign
+            </button>
+        </div>
+
         <canvas style={{width: "100vw", height: "100vh"}} id={"board"} ref={canvasRef}/>
         <div style={{display: "none"}}>
             <img src={"/tile.png"} id="tile"/>

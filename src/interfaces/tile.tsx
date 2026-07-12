@@ -8,5 +8,5 @@ export default interface Tile {
     neighbours: Map<string, Tile>,
     image: FabricImage,
     available: FabricImage,
-    powerup: "" | "bomb" | "portal" | "knight" | "invis"
+    powerup: string
 }
