@@ -24,10 +24,10 @@ const opposites = {
 }
 
 const powerSprites: { [key: string]: string } = {
-    "portal": "/tile-portal.png",
-    "invis": "/tile-invis.png",
-    "knight": "/tile-knight.png",
-    "bomb": "/tile-bomb.png"
+    "portal": "/simon/tile-portal.png",
+    "invis": "/simon/tile-invis.png",
+    "knight": "/simon/tile-knight.png",
+    "bomb": "/simon/tile-bomb.png"
 }
 
 function getNextTileOffset(direction: Directions) {
@@ -147,12 +147,12 @@ export default function GameBoard({id, mode, blocks, powerups}: {
         if (currentPower == "bomb") {
             if (tile.state == "blocked") {
                 tile.state = "empty"
-                await tile.image.setSrc("/tile.png")
+                await tile.image.setSrc("/simon/tile.png")
             }
             for (const neighbour of [...tile.neighbours.values()]) {
                 if (neighbour.state == "blocked") {
                     neighbour.state = "empty"
-                    await neighbour.image.setSrc("/tile.png")
+                    await neighbour.image.setSrc("/simon/tile.png")
                 }
             }
             setCurrentPower("")
@@ -166,7 +166,7 @@ export default function GameBoard({id, mode, blocks, powerups}: {
             return false
         if (horseTile) {
             horseTile.state = "empty"
-            await horseTile.image.setSrc("/tile.png")
+            await horseTile.image.setSrc("/simon/tile.png")
         }
 
         let power = ""
@@ -181,7 +181,7 @@ export default function GameBoard({id, mode, blocks, powerups}: {
             if (tile.powerup == "portal") {
                 tile.powerup = ""
                 tile.state = "empty"
-                await tile.image.setSrc("/tile.png")
+                await tile.image.setSrc("/simon/tile.png")
                 tile = portals.filter(_ => _ != tile)[0]
             }
             tile.powerup = ""
@@ -191,9 +191,9 @@ export default function GameBoard({id, mode, blocks, powerups}: {
 
         tile.state = "horse"
         if (currentPower != "invis")
-            await tile.image.setSrc("/tile-horse.png")
+            await tile.image.setSrc("/simon/tile-horse.png")
         if (power == "knight")
-            await tile.image.setSrc("/tile-knight.png")
+            await tile.image.setSrc("/simon/tile-knight.png")
 
         canvas.renderAll()
         sethorseTile(tile)
@@ -267,7 +267,7 @@ export default function GameBoard({id, mode, blocks, powerups}: {
         console.log(tile.state, tile.powerup)
         if ((tile.state != "empty" && tile.state != "available") || tile.powerup)
             return false
-        await tile.image.setSrc("/tile-blocked.png")
+        await tile.image.setSrc("/simon/tile-blocked.png")
         tile.state = "blocked"
         if (currentPower != "bomb")
             showAvailability(canvas)
@@ -409,9 +409,9 @@ export default function GameBoard({id, mode, blocks, powerups}: {
             const available = renderTile(canvas.width / 2 - TILE_WIDTH / 2, canvas.height / 2 - TILE_HEIGHT / 2)
             if (!emptyTile || !firstImage || !available)
                 return
-            await available.setSrc("/tile-available.png")
+            await available.setSrc("/simon/tile-available.png")
             available.opacity = 0
-            await firstImage.setSrc("/tile-horse.png")
+            await firstImage.setSrc("/simon/tile-horse.png")
             const firstElem: Tile = {
                 id: "s",
                 state: "available",
@@ -502,7 +502,7 @@ export default function GameBoard({id, mode, blocks, powerups}: {
                     tilePositions.set(pos, newId)
                     queue.push(newTile)
                     if (blocks.includes(newId)) {
-                        await newTile.image.setSrc("/tile-blocked.png")
+                        await newTile.image.setSrc("/simon/tile-blocked.png")
                         newTile.state = "blocked"
                     } else if (powerups[newId]) {
                         newTile.powerup = powerups[newId]
@@ -552,21 +552,21 @@ export default function GameBoard({id, mode, blocks, powerups}: {
             ? <div className={"container"}
                    style={{
                        backgroundSize: "cover",
-                       backgroundImage: mode == "horse" ? "url('/horse-win.jpg')" : "url('/brick-lose.jpg')"
+                       backgroundImage: mode == "horse" ? "url('/simon/horse-win.jpg')" : "url('/simon/brick-lose.jpg')"
                    }}/>
             : winner == "blocker"
                 ? <div className={"container"}
                        style={{
                            backgroundSize: "cover",
-                           backgroundImage: mode == "blocker" ? "url('/brick-win.png')" : "url('/horse-lose.png')"
+                           backgroundImage: mode == "blocker" ? "url('/simon/brick-win.png')" : "url('/simon/horse-lose.png')"
                        }}/>
                 : <></>}
         <div style={{position: "absolute", margin: "15px"}}>
-            <img src={waiting ? "/turn-opponent.png" : "/turn-you.png"}
+            <img src={waiting ? "/simon/turn-opponent.png" : "/simon/turn-you.png"}
                  style={{height: "50px"}}/>
             {currentPower
                 ? <img
-                    src={currentPower == "knight" ? "/knight-tip.png" : currentPower == "invis" ? "/invis-tip.png" : currentPower == "bomb" ? "/bomb-tip.png" : "/blank.png"}
+                    src={currentPower == "knight" ? "/simon/knight-tip.png" : currentPower == "invis" ? "/simon/invis-tip.png" : currentPower == "bomb" ? "/simon/bomb-tip.png" : "/simon/blank.png"}
                     style={{height: "50px", display: "block"}}/>
                 : <></>}
             <button onClick={resign}
@@ -576,7 +576,7 @@ export default function GameBoard({id, mode, blocks, powerups}: {
 
         <canvas style={{width: "100vw", height: "100vh"}} id={"board"} ref={canvasRef}/>
         <div style={{display: "none"}}>
-            <img src={"/tile.png"} id="tile"/>
+            <img src={"/simon/tile.png"} id="tile"/>
         </div>
     </>
 }
