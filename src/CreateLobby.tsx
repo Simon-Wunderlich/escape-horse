@@ -3,7 +3,7 @@ import type {Page} from "./App.tsx";
 import MQTTContext from "./MQTTContext.tsx";
 import {tileList} from "./interfaces/TileList.tsx";
 
-const SERVER_URL = "http://127.0.0.1:5000/lobbies"
+const SERVER_URL = "https://escapeserver.sorry.horse/lobbies"
 
 function shuffle(array: string[]) {
     const shuffled = [...array];

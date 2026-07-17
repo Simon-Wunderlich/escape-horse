@@ -43,4 +43,4 @@ def deleteLobby(id):
     return make_response("success", 200)
 
 
-app.run()
+app.run(host="0.0.0.0", port="6728")

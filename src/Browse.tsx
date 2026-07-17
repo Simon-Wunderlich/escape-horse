@@ -10,7 +10,7 @@ interface Lobby {
     powerups: { [key: string]: string }
 }
 
-const SERVER_URL = "http://127.0.0.1:5000/lobbies"
+const SERVER_URL = "https://escapeserver.sorry.horse/lobbies"
 
 export default function Browse({setPage, setRole, setId, setBlocks, setPowerups}: {
     setPage: Dispatch<SetStateAction<Page>>,
